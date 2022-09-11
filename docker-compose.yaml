@@ -1,0 +1,11 @@
+services:
+  web:
+    build: ./front-end
+    image: inforet/frontend
+    ports:
+      - "4200:4200"
+  server:
+    build: ./backend-api/api-info
+    image: inforet/backend
+    ports:
+      - "8080:8080"

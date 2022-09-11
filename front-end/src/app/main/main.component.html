@@ -1,0 +1,50 @@
+<!-- Header -->
+<!-- Card for searching -->
+<!-- Table -->
+<!-- Footer maybe -->
+<div class="main-container">
+    <app-header></app-header>
+    <div clas="content-container">
+        <div class="content-area">
+            <div class="search-form">
+                <form clrForm class="form-style" (ngSubmit)="onSubmit($event)">
+                    <clr-input-container>
+                        <label>Author</label>
+                        <input clrInput type="text" name="authorName" [(ngModel)]="authorName" required />
+                        <clr-control-error> The author name is mandatory!</clr-control-error>
+                    </clr-input-container>
+                    <clr-combobox-container>
+                        <label>Sort</label>
+                        <clr-combobox name="Sort" name="sorting" [(ngModel)]="sorting" required placeholder="Select sorting type">
+                            <clr-options>
+                            <clr-option clrValue="By Date">Date</clr-option>
+                            <clr-option clrValue="By Title">Title</clr-option>
+                            <clr-option clrValue="By Citations">Citations</clr-option>
+                            </clr-options>
+                        </clr-combobox>
+                    </clr-combobox-container>
+                    <button class="btn btn-block" type="submit">Submit</button>
+                </form>
+            </div>
+            <h4> List of the author's articles</h4>
+            <div class="grid-wrapper">
+                <clr-datagrid class="grid">
+                    <clr-dg-column>Title</clr-dg-column>
+                    <clr-dg-column>Authors</clr-dg-column>
+                    <clr-dg-column>Publication Year</clr-dg-column>
+                    <clr-dg-column>Citations</clr-dg-column>
+                
+                    <clr-dg-row *clrDgItems="let paper of papers;let i = index">
+                        <clr-dg-cell>{{i}} {{paper.title}}</clr-dg-cell>
+                        <clr-dg-cell>{{paper.authors}}</clr-dg-cell>
+                        <clr-dg-cell>{{paper.year}}</clr-dg-cell>
+                        <clr-dg-cell>{{paper.cited_by.value}}</clr-dg-cell>
+                    </clr-dg-row>
+                
+                    <clr-dg-footer>{{papers.length}} papers</clr-dg-footer>
+                </clr-datagrid>
+            </div>
+            <h4> Total citation: {{totalCitations}} </h4>
+        </div>
+    </div>
+</div>
