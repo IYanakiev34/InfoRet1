@@ -13,32 +13,42 @@ export class MainComponent implements OnInit {
   authorId: string = '';
   totalCitations: number = 0;
   enumeration: number = 0;
+  canSearchMore: boolean = false;
+  linkToNext: string = '';
 
   constructor(private paperService: PaperServiceService) {}
 
-  ngOnInit(): void {
-    const dummy = {
-      title: 'Dummy title',
-      authors: 'Ivan and Milko',
-      year: '2010',
-      cited_by: {
-        value: 100,
-      },
-    };
-    this.papers.push(dummy);
-    this.papers.push(dummy);
-    this.papers.push(dummy);
-    this.papers.push(dummy);
-    this.papers.push(dummy);
+  ngOnInit(): void {}
+
+  // Get the next chunk of 100 papers
+  getNext() {
+    this.paperService.getNext100(this.linkToNext).subscribe((res) => {
+      res = JSON.stringify(res);
+      res = JSON.parse(res);
+
+      if (res.search_metadata.status == 'Success') {
+        for (var i = 0; i < res.articles.length; i++) {
+          this.papers.push(res.articles[i]);
+        }
+
+        if (res.hasOwnProperty('serpapi_pagination')) {
+          this.canSearchMore = true;
+          this.linkToNext = res.serpapi_pagination.next;
+        } else {
+          this.canSearchMore = false;
+        }
+      } else {
+        alert('Problem occured when searching for the next 100 articles');
+      }
+    });
   }
 
+  // Get the original papers + will reset author if new author typed
   onSubmit($event: SubmitEvent) {
     $event.preventDefault();
 
     if (this.sorting == 'By Date') {
       this.sorting = 'pubdate';
-    } else if (this.sorting == 'By Title') {
-      this.sorting = 'title';
     } else if (this.sorting == 'By Citations') {
       this.sorting = '';
     }
@@ -46,16 +56,27 @@ export class MainComponent implements OnInit {
     this.paperService.getAuthorId(this.authorName).subscribe((res) => {
       res = JSON.stringify(res);
       res = JSON.parse(res);
+
       this.totalCitations = res.profiles[0].cited_by;
       this.authorId = res.profiles[0].author_id;
+
       if (res.search_metadata.status == 'Success') {
         this.paperService
           .getArticlesByAuthor(this.authorId, this.sorting)
           .subscribe((art) => {
             art = JSON.stringify(art);
             art = JSON.parse(art);
+
             if (art.search_metadata.status == 'Success') {
               this.papers = art.articles;
+
+              if (art.serpapi_pagination.next != undefined) {
+                this.canSearchMore = true;
+                this.linkToNext = art.serpapi_pagination.next;
+              } else {
+                this.canSearchMore = false;
+                this.linkToNext = '';
+              }
             } else {
               alert('Problem occured when trying to get the articles!');
             }

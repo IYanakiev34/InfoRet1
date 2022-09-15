@@ -1,11 +1,11 @@
 services:
   web:
     build: ./front-end
-    image: inforet/frontend
+    platform: linux/amd64
     ports:
       - "4200:4200"
   server:
     build: ./backend-api/api-info
-    image: inforet/backend
+    platform: linux/amd64
     ports:
       - "8080:8080"

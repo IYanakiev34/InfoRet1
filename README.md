@@ -20,7 +20,9 @@ In order to build the project properly before running docker compose make sure y
 
 ## What is left to do
 
-- [ ] Paginate table
-- [ ] Get all papers
 - [ ] Histograms 1 and 2 ( should be easy )
 - [ ] Histograms 3 - 6 ( ask proffesor for clarification )
+
+## What is done 11.09.2022
+
+- [x] Assignment 1 is done check the README in the frontend

@@ -1,5 +1,6 @@
 package com.example.apiinfo;
 
+import com.google.gson.Gson;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -18,4 +19,9 @@ public class ApiInfoApplication {
         return builder.build();
     }
 
+
+    @Bean
+    Gson gson(){
+        return new Gson();
+    }
 }
