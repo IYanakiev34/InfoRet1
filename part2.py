@@ -71,6 +71,12 @@ def getAuthorArticles(authorName, sorting):
 
     return (data, citedby,publishers)
 
+
+"""
+    Method to find how many articles has an author
+    written in an year for all years
+"""
+
 def articlesByYear(data):
     
     res = {}
@@ -89,7 +95,11 @@ def articlesByYear(data):
         result.append(row)
 
     return result
-   
+  
+"""
+    Method to how many articles has each publisher
+    published for a given authors papers
+"""
 
 def articlesByPublisher(publishers):
     
@@ -106,6 +116,11 @@ def articlesByPublisher(publishers):
         result.append(row)
 
     return result
+
+"""
+    Method for creating a window Modal
+    that allows navigation to the otherwindows
+"""
 
 def windowModal():
     layout = [
@@ -133,6 +148,10 @@ def windowModal():
             pass
     window.close()
 
+"""
+    Method for creating the window of for the articles
+    of a given author and sort them by pubdate or citations
+"""
 
 def windowArt():
     layout = [
@@ -169,6 +188,10 @@ def windowArt():
 
     window.close()
 
+"""
+    Method for creating the window for the Histograms
+    of the authors papers
+"""
 
 def windowHist():
     layout = [
