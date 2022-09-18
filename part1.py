@@ -36,53 +36,28 @@ def getAuthorArticles(authorName, sorting):
 
     search = GoogleSearch(params)
     results = search.get_dict()
-        
-    print(json.dumps(results,indent=2,ensure_ascii=False))
-    
+
+    print(json.dumps(results, indent=2, ensure_ascii=False))
+
     data = []
     while True:
         res = search.get_dict()
-        for article in res.get("articles",[]):
+        for article in res.get("articles", []):
             row = []
-            row.append(article.get("title",''))
-            row.append(article.get("authors",''))
-            row.append(article.get("year",-1))
+            row.append(article.get("title", ''))
+            row.append(article.get("authors", ''))
+            row.append(article.get("year", -1))
             row.append(article.get("cited_by").get("value"))
 
             data.append(row)
 
-        if "next" in res.get("serpapi_pagination",[]):
-            search.params_dict.update(dict(parse_qsl(urlsplit(res.get("serpapi_pagination").get("next")).query)))
+        if "next" in res.get("serpapi_pagination", []):
+            search.params_dict.update(
+                dict(parse_qsl(urlsplit(res.get("serpapi_pagination").get("next")).query)))
         else:
             break
 
-    return (data,citedby)
-
-def windowModal():
-    layout = [
-        [sg.Button('Authors articles', key='-ART-',
-                   auto_size_button=False, size=(60, 2))],
-        [sg.Button('Authors histogram', key='-HIST-',
-                   auto_size_button=False, size=(60, 2))],
-        [sg.Button('Cited papers histogram', key='-CITE-',
-                   auto_size_button=False, size=(60, 2))]
-    ]
-
-    window = sg.Window('Window Modal', layout, size=(
-        300, 200), element_justification='c')
-
-    while True:
-        event, values = window.read()
-        if event == sg.WINDOW_CLOSED or event == 'Quit':
-            break
-
-        if event == '-ART-':
-            windowArt()
-        elif event == '-HIST-':
-            pass
-        elif event == '-CITE-':
-            pass
-    window.close()
+    return (data, citedby)
 
 
 def windowArt():
@@ -104,7 +79,7 @@ def windowArt():
         [sg.Text("Total Citations: 0", key='-CIT-')]
     ]
 
-    window = sg.Window('Part 1', layout, size=(
+    window = sg.Window('Authors Papers', layout, size=(
         1024, 800), element_justification='c')
 
     while True:
@@ -113,14 +88,13 @@ def windowArt():
             break
 
         if event == 'Submit':
-            (data,citedby) = getAuthorArticles(values[0], values[1])
+            (data, citedby) = getAuthorArticles(values[0], values[1])
             # Fill Table
             window['-TABLE-'].update(data)
             window['-CIT-'].update("Total Citations: " + str(citedby))
 
     window.close()
 
-
 if __name__ == "__main__":
     sg.theme('DarkAmber')
-    windowModal()
+    windowArt()
