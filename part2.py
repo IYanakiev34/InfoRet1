@@ -93,7 +93,6 @@ def citingArticles(links, values):
                     
                     
                     
-                    
 
                     data.append(row)
             index += 1
