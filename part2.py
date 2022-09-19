@@ -2,6 +2,7 @@ import json
 from urllib.parse import parse_qsl, urlsplit
 
 import PySimpleGUI as sg
+import scholarly
 from scholarly import ProxyGenerator, scholarly
 from serpapi import GoogleSearch
 
@@ -47,6 +48,7 @@ def getAuthorArticles(authorName, sorting):
 
     data = []
     publishers = []
+    citings = []
     while True:
         res = search.get_dict()
         for article in res.get("articles", []):
@@ -60,6 +62,8 @@ def getAuthorArticles(authorName, sorting):
             curr_pub = article.get("publication",'')
             curr_pub = curr_pub.split(' ')[0]
             publishers.append(curr_pub)
+            
+            citingPapers = article.get("cited_by").get("link",'')
 
             data.append(row)
 
@@ -69,12 +73,35 @@ def getAuthorArticles(authorName, sorting):
         else:
             break
 
-    return (data, citedby,publishers)
+    return (data, citedby, publishers, citingPapers)
 
 
 """
+    This method gets the data of all the papers citing the given articles
+"""
+def citingArticles(links, values):
+    data = []
+    index = 0
+    
+    while True:
+        for link in links:
+            if index in values:
+                
+                for article in link.get("organic_results", []):
+                    
+                    row = []
+                    
+                    
+                    
+                    
+
+                    data.append(row)
+            index += 1
+    return 0
+
+"""
     Method to find how many articles has an author
-    written in an year for all years
+    written in a year for all years
 """
 
 def articlesByYear(data):
@@ -117,6 +144,8 @@ def articlesByPublisher(publishers):
 
     return result
 
+
+
 """
     Method for creating a window Modal
     that allows navigation to the otherwindows
@@ -128,7 +157,7 @@ def windowModal():
                    auto_size_button=False, size=(60, 2))],
         [sg.Button('Authors histogram', key='-HIST-',
                    auto_size_button=False, size=(60, 2))],
-        [sg.Button('Cited papers histogram', key='-CITE-',
+        [sg.Button('Citing papers histogram', key='-CITE-',
                    auto_size_button=False, size=(60, 2))]
     ]
 
@@ -145,7 +174,7 @@ def windowModal():
         elif event == '-HIST-':
             windowHist()
         elif event == '-CITE-':
-            pass
+            windowCite()
     window.close()
 
 """
@@ -181,7 +210,7 @@ def windowArt():
             break
 
         if event == 'Submit':
-            (data, citedby,publishers) = getAuthorArticles(values[0], values[1])
+            (data, citedby, publishers, citings) = getAuthorArticles(values[0], values[1])
             # Fill Table
             window['-TABLE-'].update(data)
             window['-CIT-'].update("Total Citations: " + str(citedby))
@@ -225,8 +254,8 @@ def windowHist():
             break
 
         if event == 'Submit':
-            # Get articles and then get the histrogram
-            (data,citedby,publishers) = getAuthorArticles(values[0], 'Year')
+            # Get articles and then get the histogram
+            (data,citedby,publishers, citings) = getAuthorArticles(values[0], 'Year')
                 
             print("\n Data:{0}\n \nCitedby:{1}\n \nPublishers:{2}\n" .format(data,citedby,publishers))
             byYear = articlesByYear(data)
@@ -236,6 +265,64 @@ def windowHist():
             window['-HIST1-'].update(byYear)
             window['-HIST2-'].update(byPublisher)
 
+
+def windowCite():
+    
+    column1 = [
+        [sg.Table(values=[], headings=[ 'Source name', 'Quantity'], auto_size_columns=False,
+                col_widths=[20, 10],
+                max_col_width=40,
+                display_row_numbers=True,
+                justification='center',
+                key='-HIST1-',
+                row_height=30)], 
+        
+    ]
+    column2 = [
+        [sg.Table(values=[], headings=[ 'Publication Year', 'Quantity'], auto_size_columns=False,
+                col_widths=[20, 10],
+                max_col_width=40,
+                display_row_numbers=True,
+                justification='center',
+                key='-HIST1-',
+                row_height=30)]
+    ]
+    
+    layout = [
+        [sg.Text("GUI for Google Scholar queries")],
+        [sg.Text("Search papers"), sg.InputText(do_not_clear=False)],
+        [sg.Button("Submit")],
+        [sg.Text("Histogram of all papers citing the chosen papers")],
+        [sg.Column(column1), sg.Column(column2), sg.Table(values=[], headings=[ 'Publisher', 'Qunatity'], auto_size_columns=False,
+                  col_widths=[20, 10],
+                  max_col_width=40,
+                  display_row_numbers=True,
+                  justification='center',
+                  key='-HIST2-',
+                  row_height=30)]
+    ]
+
+    window = sg.Window('Citing papers histograms', layout, size=(
+        1024, 800), element_justification='c')
+
+    while True:
+        event, values = window.read()
+
+        if event == sg.WINDOW_CLOSED or event == 'Quit':
+            break
+
+        if event == 'Submit':
+            # Get articles and then get the histogram
+            (data,citedby,publishers, citings) = getAuthorArticles(values[0], 'Year')
+                
+            print("\n Data:{0}\n \nCitedby:{1}\n \nPublishers:{2}\n" .format(data,citedby,publishers))
+            citingArticles = citingArticles(data)
+            byPublisher = articlesByPublisher(publishers) 
+
+            # Update the data in the table
+            window['-CITE-'].update(citingArticles)
+    
+    
 if __name__ == "__main__":
     sg.theme('DarkAmber')
     windowModal()
