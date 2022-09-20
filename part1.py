@@ -37,7 +37,6 @@ def getAuthorArticles(authorName, sorting):
     search = GoogleSearch(params)
     results = search.get_dict()
 
-    print(json.dumps(results, indent=2, ensure_ascii=False))
 
     data = []
     while True:

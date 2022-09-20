@@ -489,7 +489,7 @@ def windowAll():
         [sg.Text("Selected papers"), sg.InputText(do_not_clear=False)],
         [sg.Button("Calculate Self Citations")],
         [sg.Text("List of author's articles")],
-        [sg.Table(values=[], headings=['Title', 'Authors', 'Citations', 'Self-Cite', 'Non-Self-Cite'], auto_size_columns=False,
+        [sg.Table(values=[], headings=['Title', 'Authors', 'Citations', 'Non-Self-Cite','Self-Cite'], auto_size_columns=False,
                   col_widths=[20, 20, 13, 13, 13],
                   max_col_width=40,
                   display_row_numbers=True,
