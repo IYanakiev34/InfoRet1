@@ -1,4 +1,5 @@
 import json
+from pprint import pprint
 from urllib.parse import parse_qsl, urlparse, urlsplit
 
 import numpy as np
@@ -7,180 +8,298 @@ from scholarly import ProxyGenerator, scholarly
 from serpapi import GoogleSearch
 
 # API_KEY for serp
-API_KEY = "5f6b35250a77810b11e6d8a918abeb62e6f37fc18dd836f9ca17ebcb7d4269e6"
+API_KEY = "9957764bad0f2c57c9cb392221e86f9660eae95920129cef945692d60e3ebd35"
 
 
+class Utils():
+    """
+        Extract: title,authors,publication year, and citations
+        for each articles in the authors articles and return the data
+    """
+    @staticmethod
+    def get_authors_articles_and_cites(author_name, sort):
+        author_id = Utils.get_authors_id_from_name(str(author_name))
 
-"""
-    Method that return all of the articles by a given author
-    it uses the SERPApi
-    it also return the total citedby value and the publishers of each article
-"""
+        # Preprocess sorting parameter
+        if sort == 'Year':
+            sort = 'pubdate'
+        else:
+            sort = ''
 
-def getAuthorArticles(authorName, sorting):
-    if sorting == 'Year':
-        sorting = 'pubdate'
-    else:
-        sorting = ''
+        params = {
+            "engine": "google_scholar_author",
+            "author_id": author_id,
+            "api_key": API_KEY,
+            "sort": sort,
+            "start": 0,
+            "num": 100,
+        }
 
-    search_query = scholarly.search_author(authorName)
-    author = next(search_query)
+        search = GoogleSearch(params)
 
-    citedby = author['citedby']
-    author_id = author['scholar_id']
+        profile_is_present = True
 
-    params = {
-        "engine": "google_scholar_author",
-        "author_id": author_id,
-        "api_key": API_KEY,
-        "sort": sorting,
-        "hl": "en",
-        "start": 0,
-        "num": 100
-    }
+        data = []
+        # Iterate to find all articles
+        while profile_is_present:
+            results = search.get_dict()
+            articles = results['articles']
 
-    search = GoogleSearch(params)
-    results = search.get_dict()
+            for article in articles:
+                row = []
+                row.append(article['title'])
+                authors = article['authors'].split(',')
 
-    data = []
-    publishers = []
-    while True:
-        res = search.get_dict()
-        for article in res.get("articles", []):
+                # Remove unneccessary white spaces
+                for i in range(len(authors)):
+                    authors[i] = authors[i].strip()
+                
+                row.append(authors)
+                row.append(article['year'])
+                row.append(article['cited_by']['value'])
+                
+                data.append(row)
 
+            try:
+                if 'next' in results['serpapi_pagination']:
+                    search.params_dict.update(
+                        dict(parse_qsl(urlsplit(results['pagination']['next']).query)))
+                else:
+                    profile_is_present = False
+            except KeyError:
+                profile_is_present = False
+
+        return data
+
+    @staticmethod
+    def get_selected_papers_citings(selected_papers,author_name):
+        """
+            TODO: call the SERP API endpoint for citings
+            Get infromation about the citing papers
+                Publisher
+                Year
+                Journal
+                    * If authors are collinding self citation
+        """
+        search_query = scholarly.search_author(author_name)
+        author = scholarly.fill(next(search_query),sections=['publications'])
+        
+        publications = author['publications']
+    
+        dict_year = {}
+        dict_pub = {}
+        dict_jour = {}
+
+        data = []
+
+        for index,pub in enumerate(publications):
+            if index in selected_papers:
+                self_citings = 0
+                filled_pub = scholarly.citedby(pub)
+                filled_pub = next(filled_pub)
+                
+                # TODO: self citations based on this not the thing im doing now
+                closer_look = scholarly.fill(author['publications'][index])
+
+                #Fill rows of data
+                row = []
+                row.append(closer_look['bib']['title'])
+                row.append(closer_look['bib']['author'])
+                row.append(closer_look['bib']['pub_year'])
+                row.append(closer_look['num_citations'])
+
+                auths = filled_pub['bib']['author']
+
+                for auth in auths:
+                    if auth == author_name:
+                        self_citings += 1
+
+                row.append(self_citings)
+                row.append(row[3] - self_citings)
+                
+                data.append(row)
+                
+                try:
+                    year = filled_pub['bib']['pub_year']
+                    if year in dict_year:
+                        dict_year[year] += 1
+                    else:
+                        dict_year[year] = 1
+                except KeyError:
+                    dict_year["None"] = 0
+
+
+                try:
+                    publisher = filled_pub['pub_url']
+                    publisher = urlparse(publisher).netloc
+
+                    if publisher in dict_pub:
+                        dict_pub[publisher] += 1
+                    else:
+                        dict_pub[publisher] = 1
+                except KeyError:
+                    dict_pub["None"] = 0 
+
+
+                try:
+                    journal = filled_pub['bib']['venue']
+
+                    if journal in dict_jour:
+                        dict_jour[journal] += 1
+                    else:
+                        dict_jour[journal] = 1
+                except KeyError:
+                    dict_jour["None"] = 0
+
+
+        hist_pub = []
+        hist_jour = []
+        hist_year = []
+
+        for i in dict_pub:
             row = []
-            row.append(article.get("title", ''))
-            row.append(article.get("authors", ''))
-            row.append(article.get("year", -1))
-            row.append(article.get("cited_by").get("value"))
+            row.append(i)
+            row.append(dict_pub[i])
 
-            curr_pub = article.get("publication", '')
-            curr_pub = curr_pub.split(' ')[0]
-            publishers.append(curr_pub)
+            hist_pub.append(row)
 
-            data.append(row)
+        for i in dict_jour:
+            row = []
+            row.append(i)
+            row.append(dict_jour[i])
 
-        if "next" in res.get("serpapi_pagination", []):
-            search.params_dict.update(
-                dict(parse_qsl(urlsplit(res.get("serpapi_pagination").get("next")).query)))
-        else:
-            break
+            hist_jour.append(row)
 
-    return (data, citedby, publishers)
+        for i in dict_year:
+            row = []
+            row.append(i)
+            row.append(dict_year[i])
 
-
-"""
-    Method to find how many articles has an author
-    written in an year for all years
-"""
+            hist_year.append(row)
 
 
-def articlesByYear(data):
-
-    res = {}
-
-    for i in data:
-        if i[2].isnumeric():
-            if i[2] in res:
-                res[i[2]] += 1
-            else:
-                res[i[2]] = 1
-
-    result = []
-
-    for i in res:
-        row = [i, res[i]]
-        result.append(row)
-
-    return result
+        return (hist_year,hist_pub,hist_jour,data)
 
 
-"""
-    Method to how many articles has each publisher
-    published for a given authors papers
-"""
+
+        # TODO: return(publishers,Years,Journals,self-citations)
 
 
-def articlesByPublisher(publishers):
+    """
+        Extract the data needed for the histograms of all the authors
+        publications: publications per year, publications by publisher
+    """
+    @staticmethod
+    def get_authors_histograms(author_name):
+        search_query = scholarly.search_author(author_name)
+        author = scholarly.fill(next(search_query))
 
-    d = {}
-    for publisher in publishers:
-        if publisher in d:
-            d[publisher] += 1
-        else:
-            d[publisher] = 1
+        publications = author['publications']
 
-    result = []
-    for i in d:
-        row = [i, d[i]]
-        result.append(row)
+        dict_pub = {}
+        dict_year = {}
+        # Extract publishers and pubs per year
+        for pub in publications:
+            filled_pub = scholarly.fill(pub)
 
-    return result
+            try:
+                pub_year = filled_pub['bib']['pub_year']
+
+                if pub_year in dict_year:
+                    dict_year[pub_year] += 1
+                else:
+                    dict_year[pub_year] = 1
+            except KeyError:
+                dict_year["None"] = 0
+
+            try:
+                publisher = filled_pub['pub_url']
+
+                publisher = urlparse(publisher).netloc
+
+                if publisher in dict_pub:
+                    dict_pub[publisher] += 1
+                else:
+                    dict_pub[publisher] = 1
+            except KeyError:
+                dict_pub["None"] = 1
+
+        hist_year = []
+        hist_pub = []
+
+        # Convert dictionary into list
+        for i in dict_year:
+            row = []
+            row.append(i)
+            row.append(dict_year[i])
+
+            hist_year.append(row)
+
+        for i in dict_pub:
+            row = []
+            row.append(i)
+            row.append(dict_pub[i])
+
+            hist_pub.append(row)
+
+        return (hist_year, hist_pub)
+
+    """
+        Extract the auhtor id given an author name
+    """
+    @staticmethod
+    def get_authors_id_from_name(author_name):
+        search_query = scholarly.search_author(author_name)
+        author = next(search_query)
+
+        return author['scholar_id']
+
+    @staticmethod
+    def get_authors_total_citations(author_name):
+        search_query = scholarly.search_author(author_name)
+        author = next(search_query)
+
+        return author['citedby']
     
+    @staticmethod
+    def get_selected_papers(papers):
+        papers = papers.strip('[]')
+        selected_papers = []
+
+        is_array = False
+        data = []
+        for i in papers:
+            if i == '-':
+                is_array = True
+                papers = papers.replace(i,' ')
+
+        if is_array:
+            papers = papers.split(' ')
+            for i in range(int(papers[0]),int(papers[1])+1):
+               selected_papers.append(i)
+        else:
+            papers= papers.split(',')
+            for i in papers:
+                selected_papers.append(int(i))
+
+
+        return selected_papers
+
     
 """
-    Method for creating the window of for the articles
-    of a given author and sort them by pubdate or citations
+    Create window modal that will lead to the other windows
+    for the assignment. Acts as a gateway
 """
-
-
-def windowArt():
+def create_window_modal():
     layout = [
-        [sg.Text("GUI for Google Scholar queries")],
-        [sg.Text('Enter Author name'), sg.InputText(do_not_clear=False)],
-        [sg.Text('Sort terms of'), sg.InputCombo(
-            ['Citations', 'Year'], size=(40, 2))],
-        [sg.Button('Submit')],
-        [sg.Text('List of the authors articles')],
-        [sg.Table(values=[], headings=['Title', 'Authors', 'Publication year', 'citations'],
-                  auto_size_columns=False,
-                  col_widths=[20, 20, 12, 12],
-                  max_col_width=80,
-                  display_row_numbers=True,
-                  justification='center',
-                  key='-TABLE-',
-                  row_height=30)],
-        [sg.Text("Total Citations: 0", key='-CIT-')]
-    ]
-
-    window = sg.Window('Authors Papers', layout, size=(
-        1024, 800), element_justification='c')
-
-    while True:
-        event, values = window.read()
-        if event == sg.WINDOW_CLOSED or event == 'Quit':
-            break
-
-        if event == 'Submit':
-            (data, citedby, publishers) = getAuthorArticles(
-                values[0], values[1])
-            # Fill Table
-            window['-TABLE-'].update(data)
-            window['-CIT-'].update("Total Citations: " + str(citedby))
-
-    window.close()
-
-
-"""
-    Method for creating a window Modal
-    that allows navigation to the otherwindows
-"""
-
-
-def windowModal():
-    layout = [
-        [sg.Button('Authors articles', key='-ART-',
-                   auto_size_button=False, size=(60, 2))],
-        [sg.Button('Authors histogram', key='-HIST-',
-                   auto_size_button=False, size=(60, 2))],
-        [sg.Button('Cited papers histogram', key='-CITE-',
-                   auto_size_button=False, size=(60, 2))],
-        [sg.Button('All Information for papers', key='-ALL-',
-                   auto_size_button=False, size=(60, 2))]
+        [sg.Button('Articles By An Author', key='-ART-', size=(60, 2))],
+        [sg.Button('Histograms For Author', key='-HIST-', size=(60, 2))],
+        [sg.Button('Citing Papers', key='-CITE-', size=(60, 2))],
+        [sg.Button('All Articles Info', key='-INFO-', size=(60, 2))],
     ]
 
     window = sg.Window('Window Modal', layout, size=(
-        350, 200), element_justification='c')
+        500, 250), element_justification='c')
 
     while True:
         event, values = window.read()
@@ -188,343 +307,219 @@ def windowModal():
             break
 
         if event == '-ART-':
-            windowArt()
+            create_articles_window()
         elif event == '-HIST-':
-            windowHist()
+            create_window_histograms()
         elif event == '-CITE-':
-            windowCite()
-        elif event == '-ALL-':
-            windowAll()
-
-    window.close()
-
-
-
-
-
-"""
-    Method for creating the window for the Histograms
-    of the authors papers
-"""
-
-
-def windowHist():
-    layout = [
-        [sg.Text("GUI for Google Scholar queries")],
-        [sg.Text("Search Author"), sg.InputText(do_not_clear=False)],
-        [sg.Button("Submit")],
-        [sg.Text("Histogram of all author's papers")],
-        [sg.Table(values=[], headings=['Publication Year', 'Quantity'], auto_size_columns=False,
-                  col_widths=[20, 10],
-                  max_col_width=40,
-                  display_row_numbers=True,
-                  justification='center',
-                  key='-HIST1-',
-                  row_height=30)],
-        [sg.Table(values=[], headings=['Publisher', 'Quantity'], auto_size_columns=False,
-                  col_widths=[20, 10],
-                  max_col_width=40,
-                  display_row_numbers=True,
-                  justification='center',
-                  key='-HIST2-',
-                  row_height=30)]
-    ]
-
-    window = sg.Window('Authors Histograms', layout, size=(
-        1024, 800), element_justification='c')
-
-    while True:
-        event, values = window.read()
-
-        if event == sg.WINDOW_CLOSED or event == 'Quit':
-            break
-
-        if event == 'Submit':
-            # Get articles and then get the histrogram
-            (data, citedby, publishers) = getAuthorArticles(values[0], 'Year')
-
-            byYear = articlesByYear(data)
-            byPublisher = articlesByPublisher(publishers)
-
-            # Update the data in the table
-            window['-HIST1-'].update(byYear)
-            window['-HIST2-'].update(byPublisher)
-
-    window.close()
-
-
-
-"""
-    Method to get all the daat about the papers
-    citing sleected author papers
-"""
-
-
-def getAuthorSelectedCitingPapers(authorName, text):
-    papers = getSelectedPapers(text)
-
-    search_query = scholarly.search_author(authorName)
-    author = next(search_query)
-    info = scholarly.fill(author, sections=['basics', 'publications'])
-
-    publications = info['publications']
-
-    journal = {}
-    pub_year = {}
-    publishers = {}
-
-    for index, pub in enumerate(publications):
-        try:
-            if index in papers:
-                q = scholarly.citedby(pub)
-                cites = next(q)
-
-                try:
-                    venue = cites['bib']['venue']
-                    if venue in journal:
-                        journal[venue] += 1
-                    else:
-                        journal[venue] = 1
-                except KeyError:
-                    journal['Null'] = 0
-
-                try:
-                    year = cites['bib']['pub_year']
-
-                    if year in journal:
-                        pub_year[year] += 1
-                    else:
-                        pub_year[year] = 1
-
-                except KeyError:
-                    pub_year['Null'] = 0
-
-                try:
-                    publisher = cites['pub_url']
-                    publisher = urlparse(publisher).netloc
-
-                    if publisher in publishers:
-                        publishers[publisher] += 1
-                    else:
-                        publishers[publisher] = 1
-
-                except KeyError:
-                    publishers['Null'] = 0
-
-        except KeyError:
-            pass
-
-    # Put the dictionaries into rows
-    hist1 = []
-    hist2 = []
-    hist3 = []
-
-    # Put into HIST1
-    for i in journal:
-        row = []
-        row.append(i)
-        row.append(journal[i])
-
-        hist1.append(row)
-
-    # Put into HIST2
-    for i in pub_year:
-        row = []
-        row.append(i)
-        row.append(pub_year[i])
-
-        hist2.append(row)
-
-    # Put into HIST3
-    for i in publishers:
-        row = []
-        row.append(i)
-        row.append(publishers[i])
-
-        hist3.append(row)
-
-    return (hist1, hist2, hist3)
-    
-"""
- Self citation generator
- remove later
-"""
-
-
-def getSelfCite(data):
-
-    for i in data:
-        if isinstance(i[3],int):
-            num = np.random.randint(0, i[3]//20, size=(1, 1))[0][0]
-            i.append(num)
-            i.append(i[3] - num)
-        else:
-            i.append(0)
-            i.append(0)
-    return data
-
-
-"""
-    Utility method to get selected papers
-"""
-
-
-def getSelectedPapers(text):
-    # Remove [ ]
-    out = text.replace('[', '')
-    out = out.replace(']', '')
-
-    papers = []
-
-    # Check if we have [n-m]
-    is_array = False
-    for i in out:
-        if i == '-':
-            out = out.replace(i, ' ')
-            is_array = True
-
-    # If so append numbers from n to m
-    if is_array:
-        temp = out.split(' ')
-        arr = []
-        for i in temp:
-            val = int(i)
-            if val >= 0:
-                arr.append(val)
-        for i in range(arr[0], arr[1]+1):
-            papers.append(int(i))
-    # else append the given numbers
-    else:
-        temp = out.split(',')
-        for i in temp:
-            papers.append(int(i))
-
-    return papers
-
-
-"""
-    Method for creating the window for the cited papers of authors selected Papers
-"""
-
-
-def windowCite():
-    layout = [
-        [sg.Text("GUI for Google Scholar queries")],
-        [sg.Text("Search Author"), sg.InputText(do_not_clear=False)],
-        [sg.Text("Selected papers"), sg.InputText(do_not_clear=False)],
-        [sg.Button("Submit")],
-        [sg.Text("Histogram of all cited papers of the selected authors papers")],
-        [sg.Table(values=[], headings=['Source(journal or conference)', 'Quantity'], auto_size_columns=False,
-                  col_widths=[40, 10],
-                  max_col_width=40,
-                  display_row_numbers=True,
-                  justification='center',
-                  key='-HIST1-',
-                  row_height=15)],
-        [sg.Table(values=[], headings=['Publication year', 'Quantity'], auto_size_columns=False,
-                  col_widths=[40, 10],
-                  max_col_width=40,
-                  display_row_numbers=True,
-                  justification='center',
-                  key='-HIST2-',
-                  row_height=15)],
-        [sg.Table(values=[], headings=['Publisher', 'Quantity'], auto_size_columns=False,
-                  col_widths=[40, 10],
-                  max_col_width=40,
-                  display_row_numbers=True,
-                  justification='center',
-                  key='-HIST3-',
-                  row_height=15)]
-    ]
-
-    window = sg.Window('Authors Histograms', layout, size=(
-        1200, 800), element_justification='c')
-
-    while True:
-        event, values = window.read()
-
-        if event == sg.WINDOW_CLOSED or event == 'Quit':
-            break
-
-        if event == 'Submit':
-            # Get articles and then get the histrogram
-            (hist1, hist2, hist3) = getAuthorSelectedCitingPapers(
-                values[0], values[1])
-            window['-HIST1-'].update(hist1)
-            window['-HIST2-'].update(hist2)
-            window['-HIST3-'].update(hist3)
+            create_window_cites()
+        elif event == '-INFO-':
+            create_window_all_info()
 
     window.close()
 
 
 """
-    Method to get the only the selcted articles
-    for the all window
+    Method for creating a window to find all articles of an author
 """
 
 
-def getNeededArticlesAll(data, papers):
-    new_data = []
-
-    for i in papers:
-        try:
-            new_data.append(data[i])
-        except Exception:
-            pass
-
-    return new_data
-
-
-"""
-
-    Method for creating window for displaying the whole Information
-    about the selected papers
-"""
-
-
-def windowAll():
+def create_articles_window():
     layout = [
-        [sg.Text("GUI for Google Scholar queries")],
-        [sg.Text("Search Author"), sg.InputText(do_not_clear=False)],
-        [sg.Text("Selected papers"), sg.InputText(do_not_clear=False)],
-        [sg.Button("Calculate Self Citations")],
-        [sg.Text("List of author's articles")],
-        [sg.Table(values=[], headings=['Title', 'Authors', 'Citations', 'Non-Self-Cite','Self-Cite'], auto_size_columns=False,
-                  col_widths=[20, 20, 13, 13, 13],
-                  max_col_width=40,
+        [sg.Text('GIU for Google Scholar queries')],
+        [sg.Text('Search Author'), sg.InputText(do_not_clear=True)],
+        [sg.Text('Sort by:'), sg.InputCombo(
+            ['Citations', 'Year'], size=(40, 2))],
+        [sg.Button('Submit')],
+        [sg.Text('List of authors\' articles')],
+        [sg.Table(values=[], headings=['Title', 'Authors', 'Publication Year', 'Citations'],
+                  auto_size_columns=False,
+                  col_widths=[20, 20, 12, 12],
+                  max_col_width=80,
                   display_row_numbers=True,
-                  justification='center',
+                  justification='c',
                   key='-TABLE-',
-                  row_height=15)]
+                  row_height=30)],
+        [sg.Text("Total Citations: 0", key='-CIT-')]
     ]
 
-    window = sg.Window('Authors Histograms', layout, size=(
-        800, 500), element_justification='c')
+    window = sg.Window('Author Articles', layout=layout,
+                       element_justification='c', size=(1024, 800))
 
     while True:
         event, values = window.read()
-
         if event == sg.WINDOW_CLOSED or event == 'Quit':
             break
 
-        if event == 'Calculate Self Citations':
-            # Get articles and then get the histrogram
-            author_name = values[0]
-            papers = getSelectedPapers(values[1])
-            (articles, citedby, pub) = getAuthorArticles(author_name, '')
-            articles = getNeededArticlesAll(articles, papers)
-            articles = getSelfCite(articles)
+        if event == 'Submit':
+            # Get author artciles
+            articles = Utils.get_authors_articles_and_cites(
+                values[0], values[1])
+            # Get total citations
+            total_citations = Utils.get_authors_total_citations(values[0])
 
+            # Update the GUI
             window['-TABLE-'].update(articles)
+            window['-CIT-'].update("Total Citations: " + str(total_citations))
+
+    window.close()
+
+
+"""
+    Method to create window for the histograms
+    of all the papers of a selected author
+"""
+
+
+def create_window_histograms():
+    layout = [
+        [sg.Text('GIU for Google Scholar queries')],
+        [sg.Text('Search Author'), sg.InputText(do_not_clear=True)],
+        [sg.Button('Submit')],
+        [sg.Text('Histograms for all publications by an author.')],
+        [sg.Table(values=[], headings=['Publication Year', 'Quantity'],
+                  auto_size_columns=False,
+                  col_widths=[20, 20],
+                  max_col_width=80,
+                  display_row_numbers=True,
+                  justification='c',
+                  key='-YEAR-',
+                  row_height=30)],
+        [sg.Table(values=[], headings=['Publisher', 'Quantity'],
+                  auto_size_columns=False,
+                  col_widths=[20, 20],
+                  max_col_width=80,
+                  display_row_numbers=True,
+                  justification='c',
+                  key='-PUB-',
+                  row_height=30)],
+    ]
+
+    window = sg.Window('Author Histograms', layout=layout,
+                       element_justification='c', size=(1200, 1000))
+
+    while True:
+        event, values = window.read()
+        if event == sg.WINDOW_CLOSED or event == 'Quit':
+            break
+
+        if event == 'Submit':
+            # Get papers per year and papers per publisher
+            (hist_year, hist_pub) = Utils.get_authors_histograms(values[0])
+            # Update the GUI
+            window['-YEAR-'].update(hist_year)
+            window['-PUB-'].update(hist_pub)
+
+    window.close()
+
+
+"""
+   Window to show the quantity of papers citing the authors
+   selected papers in 3 categories:Source,Publisher,Publication Year
+"""
+
+
+def create_window_cites():
+    layout = [
+        [sg.Text('GIU for Google Scholar queries')],
+        [sg.Text('Search Author'), sg.InputText(do_not_clear=True)],
+        [sg.Text('Selected Papers'), sg.InputText(do_not_clear=True)],
+        [sg.Button('Submit')],
+        [sg.Text('Histograms for all papers citing the authors selected papers.')],
+        [sg.Table(values=[], headings=['Source(Journal/Conference)', 'Quantity'],
+                  auto_size_columns=False,
+                  col_widths=[25, 20],
+                  max_col_width=80,
+                  display_row_numbers=True,
+                  justification='c',
+                  key='-JOUR-',
+                  row_height=30)],
+        [sg.Table(values=[], headings=['Publication Year', 'Quantity'],
+                  auto_size_columns=False,
+                  col_widths=[25, 20],
+                  max_col_width=80,
+                  display_row_numbers=True,
+                  justification='c',
+                  key='-YEAR-',
+                  row_height=30)],
+        [sg.Table(values=[], headings=['Publisher', 'Quantity'],
+                  auto_size_columns=False,
+                  col_widths=[25, 20],
+                  max_col_width=80,
+                  display_row_numbers=True,
+                  justification='c',
+                  key='-PUB-',
+                  row_height=30)],
+    ]
+
+    window = sg.Window('Citings of Papers', layout=layout,
+                       element_justification='c', size=(1200, 1000))
+
+    while True:
+        event, values = window.read()
+        if event == sg.WINDOW_CLOSED or event == 'Quit':
+            break
+
+        if event == 'Submit':
+            selected_papers = Utils.get_selected_papers(values[1])
+            
+            (hist_year,hist_pub,hist_jour,data) = Utils.get_selected_papers_citings(selected_papers,values[0])
+            """
+                Get citing information only first page
+                Per Source
+                Per Year
+                Per Publisher
+                Get self-citations:
+                    The amount of time that both autors names collide: 
+                        * At least one author common in 2 papers
+            """
+            window['-JOUR-'].update(hist_jour)
+            window['-YEAR-'].update(hist_year)
+            window['-PUB-'].update(hist_pub)
+            # Update the GUI
+
+    window.close()
+
+
+"""
+    Window for displaying all information on selected papers on an author
+    Displayed informaiton: Title,Authors,Publication year,Citations,Self-citations,Non-self-citations
+"""
+def create_window_all_info():
+    layout = [
+        [sg.Text('GIU for Google Scholar queries')],
+        [sg.Text('Search Author'), sg.InputText(do_not_clear=True)],
+        [sg.Text('Selected Papers'), sg.InputText(do_not_clear=True)],
+        [sg.Button('Submit')],
+        [sg.Text('List of authors\'s articles')],
+        [sg.Table(values=[], headings=['Title', 'Authors', 'Publication year', 'Citations', 'Self-citations', 'Non-self-citations'],
+                  auto_size_columns=False,
+                  col_widths=[15, 15, 12, 12, 12],
+                  max_col_width=80,
+                  display_row_numbers=True,
+                  justification='c',
+                  key='-INFO-',
+                  row_height=30)],
+    ]
+
+    window = sg.Window('All info on papers', layout=layout,
+                       element_justification='c', size=(1024, 780))
+
+    while True:
+        event, values = window.read()
+        if event == sg.WINDOW_CLOSED or event == 'Quit':
+            break
+
+        if event == 'Submit':
+            selected_papers = Utils.get_selected_papers(values[1])
+            
+            (hist_year,hist_pub,hist_jour,data) = Utils.get_selected_papers_citings(selected_papers,values[0])
+            window['-INFO-'].update(data)
+            # Update the GUI
+            pass
 
     window.close()
 
 
 if __name__ == "__main__":
-    # Creating proxie for schoalry in order to use the citedby query
-    pg = ProxyGenerator()
-    success = pg.FreeProxies()
-    scholarly.use_proxy(pg)
-
     sg.theme('DarkAmber')
-    windowModal()
+    create_window_modal()
