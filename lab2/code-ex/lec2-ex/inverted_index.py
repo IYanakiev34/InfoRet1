@@ -18,7 +18,6 @@
 # 06/09/2022 - Included space for Log-Entropy calculation (CJL).
 ###
 
-from cv2 import _INPUT_ARRAY_STD_VECTOR_CUDA_GPU_MAT
 from linked_list import LinkedList
 from linked_list import LinkedListIterator
 from nltk.corpus import stopwords
@@ -577,16 +576,18 @@ class InvertedIndex:
                     invDocFreq = math.log(total_docs / docFreq)
                     v[x] = value * invDocFreq
 
-        # TODO:  Need to fill this in
+        # I think I have done it!
         if log_entropy is True:
             for x in range(self.get_total_terms()):
                 value = v[x]
                 if value > 0.0:
-                    # TODO: implement same logic as in the calcLogEntropy
-                    # TODO: probably a better way that to iterate over all terms
-                    # TODO: Think about the vector space model
-                    pass
-            pass
+                    ll = self.terms[x][1]
+                    iter = LinkedListIterator(ll)
+                    item = next(iter)
+                    tf = math.log(1 + item[1])
+                    n = math.log(self.get_total_docs())
+                    pij = item[1] / self.terms[x][2]
+                    v[x] = tf * (1 + (pij * math.log(pij)) / math.log(n))
         return v
 
     ##
@@ -658,21 +659,10 @@ class InvertedIndex:
     # Revision History:
     # ~~~~~~~~~~~~~~~~~
     # 06/09/2022 - Created (CJL).
+    # NOTE: I think I did it should be correct
     ###
-
-    # term[i] = [a, b, c]
-    #           a - Term indexed
-    #           b - Linked list containing list data items
-    #           c - Total TF over all documents for term a
-    #               Each data item is of the form [c, d, e, f]
-    #               c - document identifier
-    #               d - Term frequency of term a in document c.
-    #               e - This is the TFIDF value if calculated
-    #               f - This is the Log-Entropy value if calculated
-    # TODO: remove this doc later used onlt to get to know porperties of terms
     def calcLogEntropy(self):
         docs = self.get_total_docs()
-        terms = self.get_total_terms()
 
         for t in self.terms:
             ll = t[1]
@@ -682,15 +672,10 @@ class InvertedIndex:
                     item = next(iter)
                     tf = math.log(1 + item[1])  # first part of log entropy
                     n = math.log(docs)  # total number of docs
-                    pij = item[1] / ll[2]  # fij / total fij
-                    # 1 + ( sigma j pij*log(pij)/log(n)) what is sigma j here not sure
-                    item[3] = tf * (
-                        1 + (pij * math.log(pij)) / math.log(n)
-                    )  # not sure about this one
+                    pij = item[1] / t[2]  # fij / total fij
+                    item[3] = tf * (1 + (pij * math.log(pij)) / math.log(n))
                 except StopIteration:
                     break
-
-    ### Debugging random junk below
 
     # Fun function for displaying to the screen what the current
     # term by document matrix would look like in the Inverted Index
