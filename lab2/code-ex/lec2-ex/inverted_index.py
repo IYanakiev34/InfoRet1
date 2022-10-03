@@ -24,6 +24,7 @@ from nltk.corpus import stopwords
 from nltk.stem.porter import PorterStemmer
 from collections import Counter
 import math
+from scipy.stats import spearmanr, pearsonr, kendalltau
 import re
 
 
@@ -394,7 +395,11 @@ class InvertedIndex:
     #        log_entropy - Flag as to whether or not to use Log-Entropy search query.
     #                the term/doc matrix should be already generated at this point
     #                and you should use the same setting as that.
-    #
+    #        cos_com - Cosine comparison of query vector and vectors of terms
+    #        euc_com - Euclidian Distance comparison of query vector and vectors of terms
+    #        pear_com - Pearson Correlation comparison of query vector and vectors of terms
+    #        spear_com - Spearman Correlation comparison of query vectors and vectors of terms
+    #        kend_com - Kendalltau comparison of query vectors and vectors of terms
     # @return A list of tuples (x, y) where X is the document name and y is the cosine
     #         similarity score.  This is sorted by similarity score.
     #
@@ -402,12 +407,25 @@ class InvertedIndex:
     # ~~~~~~~~~~~~~~~~~
     # 23/04/2021 - Created (CJL).
     ###
-    def search(self, q, tfidf=False, log_entropy=False):
+    def search(
+        self,
+        q,
+        tfidf=False,
+        log_entropy=False,
+        cos_com=True,
+        euc_com=False,
+        pear_com=False,
+        spear_com=False,
+        kend_com=False,
+    ):
         # Sanity check flags
         if tfidf and log_entropy:
             raise Exception(
                 "[search]:  Error, both tfidf and log_entropy can't both be True."
             )
+
+        cor_list = [cos_com, euc_com, pear_com, spear_com, kend_com]
+        # TODO: peform check to see than no more than one correlation is chosen
 
         # First, process the query and turn it into an appropriate vector representation
         qv = self.create_query_vector(q, tfidf, log_entropy)
@@ -416,8 +434,19 @@ class InvertedIndex:
         results = []
         for i in range(self.get_total_docs()):
             v = self.get_doc_vector(i)
-            cos = self.cosine_comparison(qv, v)
-            results.append((self.docs[i], cos))
+            com = 0
+            if cos_com:
+                com = self.cosine_comparison(qv, v)
+            elif euc_com:
+                com = self.euclidian_comparison(qv, v)
+            elif pear_com:
+                com = self.pearson_comparison(qv, v)
+            elif spear_com:
+                com = self.spearman_comparison(qv, v)
+            elif kend_com:
+                com = self.kendalltau_comparison(qv, v)
+
+            results.append((self.docs[i], com))
 
         # sort list of tuples on cosine value
         results.sort(key=lambda x: x[1], reverse=True)
@@ -621,6 +650,63 @@ class InvertedIndex:
         len2 = math.sqrt(len2)
 
         return dot_prod / (len1 * len2)
+
+    ##
+    # Perform Euclidian Distance comparison of two vectors. We will assume both vectors
+    # are in comparable state.
+    #
+    # @param v1 - Vector1
+    # @param v2 - Vector2
+    #
+    # Return - Euclidian Distance between the vectors
+    # Revision History:
+    # ~~~~~~~~~~~~~~~~~
+    # 02/10/2022 - Created (Ivan Yanakiev)
+    ###
+    def euclidian_comparison(self, v1, v2):
+        return math.dist(v1, v2)
+
+    ##
+    # Perform pearson correlation between two vectors. We will assume both vectors
+    # are in comparable state
+    #
+    # @param v1 - Vector1
+    # @param v2 - Vector2
+    #
+    # Return - Pearson correlation coefficient between the vectors
+    # Revision History:
+    # ~~~~~~~~~~~~~~~~~
+    # 02/10/2022 - Created(Ivan Yanakiev)
+    ###
+    def pearson_comparison(self, v1, v2):
+        return pearsonr(v1, v2)[0]
+
+    ##
+    # Perform spearman correlation between two vectors. We will asum both vector
+    # are in comparable state
+    # @param v1 - Vector1
+    # @param v2 - Vector2
+    #
+    # Return - Spearman correlation coefficient between the vectors
+    # Revision History:
+    # ~~~~~~~~~~~~~~~~
+    # 02/10/2022 - Created(Ivan Yanakiev)
+    def spearman_comparison(self, v1, v2):
+        return spearmanr(v1, v2)[0]
+
+    ##
+    # Peform spearman correlation between two vectors. We will assume both vectors
+    # are in comparable state
+    # @param v1 - Vector1
+    # @param v2 - Vector2
+    #
+    # Return - Kendalltau correlation coefficient between the vectors
+    # Revision History:
+    # ~~~~~~~~~~~~~~~~
+    # 02/10/2022 - Created (Ivan Yanakiev)
+    ###
+    def kendalltau_comparison(self, v1, v2):
+        return kendalltau(v1, v2)[0]
 
     ##
     # Calculates the TFIDF values for the current lexicon for future use.
