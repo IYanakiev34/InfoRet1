@@ -605,17 +605,22 @@ class InvertedIndex:
                     invDocFreq = math.log(total_docs / docFreq)
                     v[x] = value * invDocFreq
 
-        # I think I have done it!
+        # Should be correct
         if log_entropy is True:
             for x in range(self.get_total_terms()):
                 value = v[x]
                 if value > 0.0:
+                    # Get the linked list for the term x
                     ll = self.terms[x][1]
                     iter = LinkedListIterator(ll)
+                    # Grab the item
                     item = next(iter)
-                    tf = math.log(1 + item[1])
+                    # frequency of the term
+                    tf = math.log(1 + value)
                     n = math.log(self.get_total_docs())
-                    pij = item[1] / self.terms[x][2]
+                    # frequency of the term with respect to gloabl frequency
+                    pij = value / self.terms[x][2]
+                    # Log-Entropy value of the v[x]
                     v[x] = tf * (1 + (pij * math.log(pij)) / math.log(n))
         return v
 
@@ -744,22 +749,23 @@ class InvertedIndex:
     #
     # Revision History:
     # ~~~~~~~~~~~~~~~~~
-    # 06/09/2022 - Created (CJL).
-    # NOTE: I think I did it should be correct
+    # 07/10/2022 Ivan Yanakiev
     ###
     def calcLogEntropy(self):
         docs = self.get_total_docs()
-
         for t in self.terms:
             ll = t[1]
             iter = LinkedListIterator(ll)
             while True:
                 try:
                     item = next(iter)
-                    tf = math.log(1 + item[1])  # first part of log entropy
+                    # term frequency of term i in doc j
+                    tf = math.log(1 + item[1])
                     n = math.log(docs)  # total number of docs
-                    pij = item[1] / t[2]  # fij / total fij
-                    item[3] = tf * (1 + (pij * math.log(pij)) / math.log(n))
+                    pij = item[1] / t[2]  # local frequency with respect to global one
+                    item[3] = tf * (
+                        1 + (pij * math.log(pij)) / math.log(n)
+                    )  # Log-Netropy valueof the term
                 except StopIteration:
                     break
 
