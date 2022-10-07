@@ -412,7 +412,7 @@ class InvertedIndex:
         q,
         tfidf=False,
         log_entropy=False,
-        cos_com=True,
+        cos_com=False,
         euc_com=False,
         pear_com=False,
         spear_com=False,
@@ -424,12 +424,8 @@ class InvertedIndex:
                 "[search]:  Error, both tfidf and log_entropy can't both be True."
             )
 
-        cor_list = [cos_com, euc_com, pear_com, spear_com, kend_com]
-        # TODO: peform check to see than no more than one correlation is chosen
-
         # First, process the query and turn it into an appropriate vector representation
         qv = self.create_query_vector(q, tfidf, log_entropy)
-
         # Iterate through our corpus doing comparisons
         results = []
         for i in range(self.get_total_docs()):
@@ -621,7 +617,7 @@ class InvertedIndex:
                     # frequency of the term with respect to gloabl frequency
                     pij = value / self.terms[x][2]
                     # Log-Entropy value of the v[x]
-                    v[x] = tf * (1 + (pij * math.log(pij)) / math.log(n))
+                    v[x] = tf * (1 + (pij * math.log(pij)) / n)
         return v
 
     ##
@@ -764,7 +760,7 @@ class InvertedIndex:
                     n = math.log(docs)  # total number of docs
                     pij = item[1] / t[2]  # local frequency with respect to global one
                     item[3] = tf * (
-                        1 + (pij * math.log(pij)) / math.log(n)
+                        1 + (pij * math.log(pij)) / n
                     )  # Log-Netropy valueof the term
                 except StopIteration:
                     break
