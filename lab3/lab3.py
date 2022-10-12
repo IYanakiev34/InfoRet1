@@ -123,13 +123,46 @@ def save_results_to_file(result, filename):
         file.write(json_result)
 
 
+"""
+Method to load the json data for an engine's results.
+    Parameters:
+    -----------
+    filename: {string} The filename of the document. We assume it is in the same folder
+
+    Return:
+    -------
+    retrieved_docs: {1d array} A list of the retrieved documents (only the links to the web pages)
+"""
+
+
+def load_from_json(filename):
+    pass
+
+
+"""
+Method to calculate the precision and recall for a specific engine's retrived document set
+against the relevant document set:
+    Parameters:
+    -----------
+    retrieved_docs: {1d array} A list of the links of the retrieved documents of an engine. The order of the links
+    is the order in which they were retrieved from the engine. From first to last top_n
+    relevant_docs: {1d array} A list of the links of the retrieved documents of the baseline engine. The order
+    of the links is the order in which they were retrieved from the engine.
+
+"""
+
+
+def precision_recall(retrieved_docs, relevant_docs):
+    pass
+
+
 if __name__ == "__main__":
     # This is used only to get the files ones we got them we will analyze them
     # This will reduce the number of requests made to the serp api engine
     """
     search_query = "information retrieval evaluation"
     search_results = {
-        "google": get_search_results("google", search_query, top_n=20),
+        "google": get_search_results("google", search_query, top_n=10),
         "bing": get_search_results("bing", search_query, top_n=20),
         "duckduckgo": get_search_results("duckduckgo", search_query, top_n=20),
         "yahoo": get_search_results("yahoo", search_query, top_n=20),
@@ -140,3 +173,16 @@ if __name__ == "__main__":
     save_results_to_file(search_results["duckduckgo"], "duckduckgo")
     save_results_to_file(search_results["yahoo"], "yahoo")
     """
+    # If we have the json files just load them for analysis
+
+    # Load json files and trim them to only contain the links of the webpages
+
+    # Analyze the precision and recall for all of the 4 engine agains the baseline (google)
+
+    # Plot the precision vs recall
+
+# Precision fraction of retrieved documents which are relevant |R  Intersection with A|/|A|
+# 10 relevant 5 ansewrs 2 are in relevant thus 2/5
+
+# Recall fraction of relevant documents that are retrievd |R intersection with A|/|R|
+# 10 relevant 5 answers 2 are in relevant 2/10
