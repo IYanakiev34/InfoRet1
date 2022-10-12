@@ -16,7 +16,6 @@ and if need will perform more than 1 query to obtain the top_n organic results.
             - engine: the engine we wish to query
             - q || p: The query made to the engine
             - api_key: The api_key used for the serp api
-    curr_len: {int} The current length of the organic results its 0(can be local variable chnage that later)
     top_n: {int} The first N results of a specific search engine. Note these are the first N organic results.
 
     Returns:
@@ -25,10 +24,11 @@ and if need will perform more than 1 query to obtain the top_n organic results.
 """
 
 
-def get_results_for_engine(params, curr_len, top_n):
+def get_results_for_engine(params, top_n):
     organic_results = []
     search = GoogleSearch(params)
     is_present = True
+    curr_len = 0
     # Get all the results
     while is_present:
         results = search.get_dict()
@@ -86,15 +86,15 @@ def get_search_results(algo, query, top_n=20):
     params = {"engine": algo, "q": query, "api_key": API_KEY}
     if algo == "google":
         # Set start to 0 and num to 100 to get maximum results from a single query
-        return get_results_for_engine(params, 0, top_n)
+        return get_results_for_engine(params, top_n)
     elif algo == "bing":
-        return get_results_for_engine(params, 0, top_n)
+        return get_results_for_engine(params, top_n)
     elif algo == "duckduckgo":
-        return get_results_for_engine(params, 0, top_n)
+        return get_results_for_engine(params, top_n)
     elif algo == "yahoo":
         del params["q"]
         params["p"] = query
-        return get_results_for_engine(params, 0, top_n)
+        return get_results_for_engine(params, top_n)
 
     # If not one of the 4 search engine return null
     return None
