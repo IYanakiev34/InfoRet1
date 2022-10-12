@@ -208,6 +208,30 @@ def prepare_for_precision_at_rank(retrieved_docs, relevant_docs):
 
 
 """
+Method to obtain the f-measures for a specific engine's precision and recall values.
+We assume precision and recall values have already been computed.
+    Parameters:
+    -----------
+    precision_recall: {1.d array fo tuples(float,float) or (None,None)} The precision recall values for a given engine
+
+    Returns:
+    --------
+    f_measures: {1d array of floats} The f-measure for each document of a specific engine
+"""
+
+
+def prepare_for_f_measure(precision_recall):
+    f_measures = []
+    for (i, j) in precision_recall:
+        if i == None and j == None:
+            f_measures.append(0)
+        else:
+            f_measures.append(2 / ((1 / i) + (1 / j)))
+
+    return f_measures
+
+
+"""
 Method to obtain the next recall point in order to obtain accurate precision in case of edge cases.
 Follow the formula: P(r_j)=max P(r),r_j <= r
     Parameters:
@@ -262,6 +286,16 @@ def precision_at_11_standard_recall_levels(precision_recall, engine):
     plt.show()
 
 
+"""
+Method to create a tbale for the precision at each rank for the documents of a given
+engine. We assume the precision ranks have already been compueted.
+    Paramteres:
+    -----------
+    precisio_ranks: {1d array of floats} The precision ranks for a specific engine
+    engine: {string} The engine we will be creating the table for
+"""
+
+
 def create_table_for_precision_ranks(precision_ranks, engine):
     columns = ("Rank", "Precision @ n")
     cellText = [[index, j] for index, j in enumerate(precision_ranks)]
@@ -269,6 +303,27 @@ def create_table_for_precision_ranks(precision_ranks, engine):
     plt.axis("tight")
     plt.axis("off")
     plt.title("Precision ranks table for " + engine + " algorithm")
+    plt.show()
+
+
+"""
+Method used to create a table for the F-Measures of a given engine. We assume f_measures have already been computed.
+If f_measure of j is 0 then the document has not been found in the baseline engine (Google)
+
+    Parameters:
+    -----------
+    f_measures: {1d array of floats} The f_measures for a specific engine
+    engine: {string} The engine
+"""
+
+
+def create_table_for_f_measure(f_measures, engine):
+    columns = ("Document", "F-Measure")
+    cellText = [[index, i] for index, i in enumerate(f_measures)]
+    plt.table(cellText, colLabels=columns, loc="center")
+    plt.axis("tight")
+    plt.axis("off")
+    plt.title("F_Measures for " + engine + " algorithm")
     plt.show()
 
 
@@ -325,3 +380,15 @@ if __name__ == "__main__":
     create_table_for_precision_ranks(precision_ranks_bing, "Bing")
     create_table_for_precision_ranks(precision_ranks_duckduckgo, "DuckDuckGo")
     create_table_for_precision_ranks(precision_ranks_yahoo, "Yahoo")
+
+    # Obtain the f_measures for each engine
+    f_measures_google = prepare_for_f_measure(precision_recall_google)
+    f_measures_bing = prepare_for_f_measure(precision_recall_bing)
+    f_measures_duckduckgo = prepare_for_f_measure(precision_recall_duckduckgo)
+    f_measures_yahoo = prepare_for_f_measure(precision_recall_yahoo)
+
+    # Create a table of the f_measure for each engine
+    create_table_for_f_measure(f_measures_google, "Google")
+    create_table_for_f_measure(f_measures_bing, "Bing")
+    create_table_for_f_measure(f_measures_duckduckgo, "DuckDuckGo")
+    create_table_for_f_measure(f_measures_yahoo, "Yahoo")

@@ -43,9 +43,18 @@ This data structure allowed us to then easily graph the precision at the standar
 ### Single valued summaries
 
 Finally, we had to implement single valued summaries for the engines. We needed to compue the P @ 5, P @ 10 and the F - Measure. We decided that a good
-approach to show these metrics is through tables. SO we have create a table for the P @ 5, P@ 10 and one for the F-Measure. Below you can see the tables tha indicate the score at each rank (We assume it will be easier for the people to look at a table).
+approach to show these metrics is through tables. So we have create a table for the P @ 5, P@ 10 and one for the F-Measure. Below you can see the tables tha indicate the score at each rank (We assume it will be easier for the people to look at a table).
 
 1. ![Google precision at rank](google_sum.png)
 2. ![Bing precision at rank](bing_sum.png)
 3. ![DuckDuckGo precision at rank](duck_sum.png)
 4. ![Yahoo precision at rank](yahoo_sum.png)
+
+#### F-Measure
+
+Note F measure table show the f measure of document j of a specific engine. if the document has not been found in the baseline engine it will automatically get assigned a value of (0)
+
+1. ![F_Measure Google](f_google.png)
+2. ![F_Measure Bing](f_bing.png)
+3. ![F_Measure DuckDuckGo](f_duck.png)
+4. ![F_Measure Yahoo](f_yahoo.png)
