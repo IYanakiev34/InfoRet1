@@ -1,9 +1,68 @@
 import json
 import os
-
+from urllib.parse import parse_qsl, urlsplit
 from serpapi import GoogleSearch
 
+
 API_KEY = "c1b57a5186ae96e31b5966c89200e8fbe3491fb9854ad5089f56feed874dcf57"
+
+"""
+Method to obtain the top_n results for a specific search engine. This method will query the engine
+and if need will perform more than 1 query to obtain the top_n organic results.
+    Parameters:
+    -----------
+    params: {dictionary} Dictionary with parameters ued to query a specific search engine
+            - engine: the engine we wish to query
+            - q || p: The query made to the engine
+            - api_key: The api_key used for the serp api
+    curr_len: {int} The current length of the organic results its 0(can be local variable chnage that later)
+    top_n: {int} The first N results of a specific search engine. Note these are the first N organic results.
+
+    Returns:
+    --------
+    organic_results: {1d array} It contains the organic results for the top n results.
+"""
+
+
+def get_results_for_engine(params, curr_len, top_n):
+    organic_results = []
+    search = GoogleSearch(params)
+    is_present = True
+    # Get all the results
+    while is_present:
+        results = search.get_dict()
+        curr_res = results["organic_results"]
+
+        for res in curr_res:
+            if curr_len < top_n:
+                organic_results.append(res)
+                curr_len += 1
+            else:
+                print(
+                    "We reached the length we wanted! Engine: {0}".format(
+                        params["engine"]
+                    )
+                )
+                is_present = False
+                break
+        # Make sure to break before getting new page this svaes API calls
+        if is_present == False:
+            break
+
+        try:
+            if "next" in results["serpapi_pagination"]:
+                print("There is next for engine:{0}".format(params["engine"]))
+                search.params_dict.update(
+                    dict(
+                        parse_qsl(urlsplit(results["serpapi_pagination"]["next"]).query)
+                    )
+                )
+            else:
+                is_present = False
+        except KeyError:
+            is_present = False
+    return organic_results
+
 
 """
 Method to obtain the top_n result from each search engine.
@@ -14,7 +73,7 @@ Method to obtain the top_n result from each search engine.
     top_n (Optional paramter with default value of 20): The top_n results returned from the search query
     Returns:
     --------
-    The organic results from the top_n results # Might want to change that later so that we return all of them
+    The organic results from the top_n results 
     
 """
 
@@ -25,27 +84,19 @@ def get_search_results(algo, query, top_n=20):
 
     params = {"engine": algo, "q": query, "api_key": API_KEY}
     if algo == "google":
-        params["start"] = 0
-        params["num"] = top_n
+        # Set start to 0 and num to 100 to get maximum results from a single query
+        return get_results_for_engine(params, 0, top_n)
     elif algo == "bing":
-        params["first"] = 0
-        params["count"] = top_n  # Cannot be more than 50 so fix this later
+        return get_results_for_engine(params, 0, top_n)
     elif algo == "duckduckgo":
-        # Modify results offset to skiip first so we can get 50 results
-        params["start"] = 1
+        return get_results_for_engine(params, 0, top_n)
     elif algo == "yahoo":
         del params["q"]
         params["p"] = query
-        params["pz"] = top_n
+        return get_results_for_engine(params, 0, top_n)
 
-    search = GoogleSearch(params)
-    results = search.get_dict()
-    organic_results = results["organic_results"]
-    # Check if length of organic results == top_n if not query again
-    # Check if length is organic results > top_n if so then slice the results
-
-    # Return the top_n organic results
-    return organic_results
+    # If not one of the 4 search engine return null
+    return None
 
 
 """
@@ -68,21 +119,24 @@ def save_results_to_file(result, filename):
         file.write(json_result)
     except FileExistsError:
         os.remove(json_filename)
-        file = open(json_filename,"x")
+        file = open(json_filename, "x")
         file.write(json_result)
 
 
 if __name__ == "__main__":
+    # This is used only to get the files ones we got them we will analyze them
+    # This will reduce the number of requests made to the serp api engine
+    """
     search_query = "information retrieval evaluation"
     search_results = {
-        "google": get_search_results("google", search_query, top_n=7),
+        "google": get_search_results("google", search_query, top_n=20),
         "bing": get_search_results("bing", search_query, top_n=20),
         "duckduckgo": get_search_results("duckduckgo", search_query, top_n=20),
         "yahoo": get_search_results("yahoo", search_query, top_n=20),
     }
-    
-    save_results_to_file(search_results["google"],"google")
-    save_results_to_file(search_results["bing"],"bing")
-    save_results_to_file(search_results["duckduckgo"],"duckduckgo")
-    save_results_to_file(search_results["yahoo"],"yahoo")
-    
+
+    save_results_to_file(search_results["google"], "google")
+    save_results_to_file(search_results["bing"], "bing")
+    save_results_to_file(search_results["duckduckgo"], "duckduckgo")
+    save_results_to_file(search_results["yahoo"], "yahoo")
+    """
