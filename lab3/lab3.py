@@ -177,6 +177,37 @@ def precision_recall(retrieved_docs, relevant_docs):
 
 
 """
+Method to prepare data for create a table for precisiona at a rank. We assume we have 
+already gotten the links from the baseline engine and the one we are looking for results.
+    Parameters:
+    -----------
+    retrieved_docs: {1d array of strings} The links of the webpages for the engine we are looking for
+    relevant_docs: {1d array of string} The links of the webpages for the engine we are comparing against
+
+    Returns:
+    --------
+    p_r: {1d array of floats} An array which holds the precision values for each rank
+"""
+
+
+def prepare_for_precision_at_rank(retrieved_docs, relevant_docs):
+    p_r = []
+    in_r = 0
+    # So we do not count index 0 as rank 0
+    p_r.append(0)
+    iterated_docs = 0
+    for i in retrieved_docs:
+        iterated_docs += 1
+        for j in relevant_docs:
+            if i == j:
+                in_r += 1
+                break
+        p_r.append(in_r / iterated_docs)
+
+    return p_r
+
+
+"""
 Method to obtain the next recall point in order to obtain accurate precision in case of edge cases.
 Follow the formula: P(r_j)=max P(r),r_j <= r
     Parameters:
@@ -227,7 +258,17 @@ def precision_at_11_standard_recall_levels(precision_recall, engine):
     plt.plot(recall, precision, "ro")
     plt.xlabel("Recall")
     plt.ylabel("Precision")
-    plt.title("Recall Precision plot for " + engine + "algorithm")
+    plt.title("Recall Precision plot for " + engine + " algorithm")
+    plt.show()
+
+
+def create_table_for_precision_ranks(precision_ranks, engine):
+    columns = ("Rank", "Precision @ n")
+    cellText = [[index, j] for index, j in enumerate(precision_ranks)]
+    plt.table(cellText=cellText[1:], colLabels=columns, loc="center")
+    plt.axis("tight")
+    plt.axis("off")
+    plt.title("Precision ranks table for " + engine + " algorithm")
     plt.show()
 
 
@@ -271,8 +312,16 @@ if __name__ == "__main__":
     precision_at_11_standard_recall_levels(precision_recall_duckduckgo, "DuckDuckGo")
     precision_at_11_standard_recall_levels(precision_recall_yahoo, "Yahoo")
 
-# Precision fraction of retrieved documents which are relevant |R  Intersection with A|/|A|
-# 10 relevant 5 ansewrs 2 are in relevant thus 2/5
+    # Get the precision ranks for the different engines
+    precision_ranks_google = prepare_for_precision_at_rank(google_links, google_links)
+    precision_ranks_bing = prepare_for_precision_at_rank(bing_links, google_links)
+    precision_ranks_duckduckgo = prepare_for_precision_at_rank(
+        duckduckgo_links, google_links
+    )
+    precision_ranks_yahoo = prepare_for_precision_at_rank(yahoo_links, google_links)
 
-# Recall fraction of relevant documents that are retrievd |R intersection with A|/|R|
-# 10 relevant 5 answers 2 are in relevant 2/10
+    # Draw the table for the precision ranks of the 4 engines
+    create_table_for_precision_ranks(precision_ranks_google, "Google")
+    create_table_for_precision_ranks(precision_ranks_bing, "Bing")
+    create_table_for_precision_ranks(precision_ranks_duckduckgo, "DuckDuckGo")
+    create_table_for_precision_ranks(precision_ranks_yahoo, "Yahoo")
