@@ -1,8 +1,9 @@
 import json
 import os
 from urllib.parse import parse_qsl, urlsplit
+from regex import E
 from serpapi import GoogleSearch
-
+import matplotlib.pyplot as plt
 
 API_KEY = "c1b57a5186ae96e31b5966c89200e8fbe3491fb9854ad5089f56feed874dcf57"
 
@@ -136,7 +137,10 @@ Method to load the json data for an engine's results.
 
 
 def load_from_json(filename):
-    pass
+    input_file = open(filename)
+    json_array = json.load(input_file)
+    links = [i["link"] for i in json_array]
+    return links
 
 
 """
@@ -153,7 +157,78 @@ against the relevant document set:
 
 
 def precision_recall(retrieved_docs, relevant_docs):
-    pass
+    p_r = []
+    in_r = 0
+    iterated_docs = 0
+    for i in retrieved_docs:
+        iterated_docs += 1
+        found = False
+        for j in relevant_docs:
+            if i == j:
+                in_r += 1
+                found = True
+                break
+        if found:
+            p_r.append((in_r / len(relevant_docs), in_r / iterated_docs))
+        else:
+            p_r.append((None, None))
+
+    return p_r
+
+
+"""
+Method to obtain the next recall point in order to obtain accurate precision in case of edge cases.
+Follow the formula: P(r_j)=max P(r),r_j <= r
+    Parameters:
+    -----------
+    recall: {float} current recall value
+    precision_recall: {1d array of tuples (float,float)} the precision recall array for the specific search engine
+
+    Returns:
+    --------
+    (i,j): {float,float} If next reclal exists we return the recall and the precision value of it
+    (None,None): If no precision value exists different than current one then return none none
+"""
+
+
+def get_next_recall(recall, precision_recall):
+    for (i, j) in precision_recall:
+        if i != None and i >= recall:
+            return (i, j)
+
+    return (None, None)
+
+
+"""
+Method to plot the precision at the standard 11 recall levels for a given search engine
+results.
+    Parameters:
+    -----------
+    precision_recall: {1d array (Float,Float)} array containig the precision and recall for each results in the result
+    set of links for the speciifc search engine
+    engine: {string} The search engine for which we are plotting
+"""
+
+
+def precision_at_11_standard_recall_levels(precision_recall, engine):
+    precision = []
+    recall = []
+    curr_recall = 0.0
+    for i in range(11):
+        recall.append(round(curr_recall, 2))
+        (j, k) = get_next_recall(round(curr_recall, 2), precision_recall)
+        if k == None:
+            precision.append(0)
+        else:
+            precision.append(round(k, 2))
+        curr_recall += 0.1
+
+    plt.plot(recall, precision)
+    plt.plot(recall, precision, "ro")
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.title("Recall Precision plot for " + engine + "algorithm")
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -174,12 +249,27 @@ if __name__ == "__main__":
     save_results_to_file(search_results["yahoo"], "yahoo")
     """
     # If we have the json files just load them for analysis
-
     # Load json files and trim them to only contain the links of the webpages
-
+    google_links = load_from_json("google.json")
+    bing_links = load_from_json("bing.json")
+    duckduckgo_links = load_from_json("duckduckgo.json")
+    yahoo_links = load_from_json("yahoo.json")
     # Analyze the precision and recall for all of the 4 engine agains the baseline (google)
+    precision_recall_google = precision_recall(google_links, google_links)
+    precision_recall_bing = precision_recall(bing_links, google_links)
+    precision_recall_duckduckgo = precision_recall(duckduckgo_links, google_links)
+    precision_recall_yahoo = precision_recall(yahoo_links, google_links)
+
+    print("Precision recall Google:\n{0}\n".format(precision_recall_google))
+    print("Precision recall Bing:\n{0}\n".format(precision_recall_bing))
+    print("Precision recall Duckduckgo:\n{0}\n".format(precision_recall_duckduckgo))
+    print("Precision recall Yahoo:\n{0}\n".format(precision_recall_yahoo))
 
     # Plot the precision vs recall
+    precision_at_11_standard_recall_levels(precision_recall_google, "Google")
+    precision_at_11_standard_recall_levels(precision_recall_bing, "Bing")
+    precision_at_11_standard_recall_levels(precision_recall_duckduckgo, "DuckDuckGo")
+    precision_at_11_standard_recall_levels(precision_recall_yahoo, "Yahoo")
 
 # Precision fraction of retrieved documents which are relevant |R  Intersection with A|/|A|
 # 10 relevant 5 ansewrs 2 are in relevant thus 2/5
