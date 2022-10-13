@@ -29,7 +29,7 @@ We had to find the precision and recall of each of the four search engines compa
 
 ![Precision recall](precision_recall.png)
 
-We can clearly see that Bing and DuckDuckGo have the exact same evaluation, Yahoo has nearly the same one however it is slightly less accurate than the other 2. Inconclusion we can say that the 3 non-baseline engine perform roughly the same (on the given query)
+We can clearly see that Bing and DuckDuckGo have the exact same evaluation, Yahoo has nearly the same one however it is slightly less accurate than the other 2. Inconclusion we can say that the 3 non-baseline engine perform roughly the same (on the given query). For google we can see that the precision is alway 1 as expected and as more documents are queried the recall becomes closer to 1 and eventually 1. As expected.
 
 ### Precision at 11 standard recall levels
 
@@ -50,6 +50,8 @@ approach to show these metrics is through tables. So we have create a table for 
 3. ![DuckDuckGo precision at rank](duck_sum.png)
 4. ![Yahoo precision at rank](yahoo_sum.png)
 
+Again from our observations we can conclude that Bing and DuckDuckGo have the same values, Yahoo is off by one. But the 3 of them are nearly the same. Of course Google as the baseline engine has the perfect values since we are comparing it to itslef. So this is to be expected. The other 3 search engine have relatively high precision rank values. The `P @ 5` for bot Bing and DuckDuck go is: 0.6 and the `P @ 10` is 0.4. This can indicate that we have achieve relatively high precision Accuracy. For Yahoo `P @ 5` is the same and `P @ 10` is 0.3 Again comparable and decent results. Of course Google again has the perfect accuracy since we are comparing it to itself.
+
 #### F-Measure
 
 Note F measure table show the f measure of document j of a specific engine. if the document has not been found in the baseline engine it will automatically get assigned a value of (0)
@@ -58,3 +60,5 @@ Note F measure table show the f measure of document j of a specific engine. if t
 2. ![F_Measure Bing](f_bing.png)
 3. ![F_Measure DuckDuckGo](f_duck.png)
 4. ![F_Measure Yahoo](f_yahoo.png)
+
+Again as expected Bing and DuckDuckGo have the exact same values. Yahoo has the same first 3 and is missing the 4th one. The scores for these values is realtively high. The only thing that is keepinog them down for the msot part is the recall score on them otherwise they have very high precision. Google as expected has steadily increasing values that go all the way to 1. Of course this is as expected since we are comparing Google to itself.
