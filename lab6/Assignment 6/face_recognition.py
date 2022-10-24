@@ -70,6 +70,7 @@ for i in range(number_of_known_people):
     for j in range(number_of_training_images_per_person):
         print("%d %s" % (database[i][j]["id"], database[i][j]["filename"]))
 
+
 # For each test sample, compute the feature vector and the cosine distance
 # (https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.cosine.html)
 # with all the known people and:
@@ -85,18 +86,29 @@ test_path = os.path.join(dataset_path, "fr_dataset", "test")
 for i in range(11):
     person_path = os.path.join(test_path, str(i).zfill(2))
     for filename in glob(os.path.join(person_path, "*.jpg")):
-        # YOUR CODE HERE
-        #################
-        """
-        Computer feature vector the same way that is done above
-        get cosine distance of feature vectors with all feature vectors in the database
-        get smallest difference and if smaller than threshhold then this is the match
-        else this is unknow person
-        basically in groundtruth put the correct label for the test while in the predictions the predicted label
-        """
-        print("YOUR CODE HERE")
-        #################
+        # Get feature vector for current image
+        feature_vector = extract_features(face_reco_model, filename)
+        # Set default values for dist and prediction label
+        dist = 10000000
+        prediction_label = 0
+        # Find the closest feature vector in the database
+        for k in range(number_of_known_people):
+            for j in range(number_of_training_images_per_person):
+                curr = cosine(feature_vector, database[k][j]["feature_vector"])
+                if curr < dist:
+                    dist = curr
+                    prediction_label = database[k][j]["id"]
+        # If dist <= thresh hold then known person else unknown
+        if dist <= rejection_threshold:
+            predictions.append(prediction_label)
+        else:
+            predictions.append(10)
 
+        # Add current label to groundtruth
+        groundtruth.append(i)
+
+print("Predictions:\n{0}\n".format(predictions))
+print("Groundtruth:\n{0}\n".format(groundtruth))
 # 1) Try different values between 1 and 10 for number_of_known_people
 #   Report accuracies (with a chart if you prefer) and confusion matrices and discuss the results
 # 2) Try different values between 1 and 10 number_of_training_images_per_person
