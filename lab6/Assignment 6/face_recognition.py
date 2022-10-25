@@ -41,7 +41,7 @@ number_of_known_people = 10
 # Number of images stored for a known person
 number_of_training_images_per_person = 10
 # Maximum distance for considering a test sample as a face of a known person
-rejection_threshold = 1.00
+rejection_threshold = 0.44
 # Dataset path - Folder in which you extracted fr_dataset.zip, you can use relative path
 dataset_path = ""
 
@@ -120,8 +120,3 @@ print(
     "Normalized confusion matrix\n %s"
     % (confusion_matrix(groundtruth, predictions, normalize="true"))
 )
-
-# YOUR (OPTIONAL) CODE HERE FOR REPORTING OTHER RESULTS
-#################
-print("YOUR OPTIONAL CODE HERE")
-#################
